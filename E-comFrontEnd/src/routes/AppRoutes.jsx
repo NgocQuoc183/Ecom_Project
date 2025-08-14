@@ -12,6 +12,8 @@ import DashBoard from "../pages/AdminLayout/Dashboard"
 import ManageCategories from "../pages/AdminLayout/ManageCategories";
 import ManageProducts from "../pages/AdminLayout/ManageProducts";
 import ManageOrders from "../pages/AdminLayout/ManageOrders";
+import ManageUsers from "../pages/AdminLayout/ManageUsers";
+import TestCart from "../pages/TestCart";
 
 const AppRoutes = () => {
   return (
@@ -28,7 +30,9 @@ const AppRoutes = () => {
       <Route path="/managecategories" element={<ManageCategories />} />
       <Route path="/manageproducts" element={<ManageProducts />} />
        <Route path="/manageorders" element={<ManageOrders/>} />
+       <Route path="/manageusers" element={<ManageUsers/>} />
       <Route path="/ordershistory" element={<OrdersHistory />} />
+      <Route path="/test-cart" element={<TestCart />} />
 
     </Routes>
 

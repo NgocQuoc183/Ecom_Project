@@ -155,7 +155,7 @@ const ProductList = () => {
       try {
         const [productsData, categoriesData] = await Promise.all([
           getAllProducts(page, limit, category, keyword, sort),
-          axios.get('http://localhost:5000/api/categories')
+          axios.get('/api/categories')
         ]);
         
         setProducts(productsData.data);

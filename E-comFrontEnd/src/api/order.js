@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api'; // Full URL đến backend
+const API_URL = '/api'; // Sử dụng URL tương đối để proxy hoạt động
 
 // Tạo đơn hàng
 export const createOrder = async (orderData) => {

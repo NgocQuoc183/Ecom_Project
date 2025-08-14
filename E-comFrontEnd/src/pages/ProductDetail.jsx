@@ -167,18 +167,35 @@
 
 // export default ProductDetail;
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { addToCart } from '../api/cart';
+import jwt_decode from 'jwt-decode';
 
 const ProductDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [zoomStyle, setZoomStyle] = useState({});
+  const [quantity, setQuantity] = useState(1);
+
+  // Lấy user ID từ token
+  const token = localStorage.getItem('token');
+  let userId = null;
+
+  if (token) {
+    try {
+      const decodedToken = jwt_decode(token);
+      userId = decodedToken.id;
+    } catch (error) {
+      console.error("Lỗi giải mã token:", error);
+    }
+  }
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/products/${id}`)
+    axios.get(`/api/products/${id}`)
       .then((res) => {
         setProduct(res.data);
         setLoading(false);
@@ -205,6 +222,48 @@ const ProductDetail = () => {
       transformOrigin: 'center center',
       transform: 'scale(1)',
     });
+  };
+
+  // Hàm xử lý thêm vào giỏ hàng
+  const handleAddToCart = async () => {
+    if (!userId) {
+      alert('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const response = await addToCart(userId, product.id, quantity);
+
+      if (response.message === 'Thêm sản phẩm vào giỏ hàng thành công!' ||
+          response.message === 'Cập nhật số lượng trong giỏ hàng thành công.') {
+        alert('Sản phẩm đã được thêm vào giỏ hàng');
+      } else {
+        alert('Lỗi khi thêm sản phẩm vào giỏ hàng');
+      }
+    } catch (error) {
+      console.error('Lỗi khi thêm sản phẩm vào giỏ hàng:', error);
+      alert('Lỗi khi thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.');
+    }
+  };
+
+  // Hàm xử lý mua ngay
+  const handleBuyNow = async () => {
+    if (!userId) {
+      alert('Vui lòng đăng nhập để mua hàng');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      // Thêm vào giỏ hàng trước
+      await addToCart(userId, product.id, quantity);
+      // Chuyển đến trang thanh toán
+      navigate('/cart');
+    } catch (error) {
+      console.error('Lỗi khi mua ngay:', error);
+      alert('Lỗi khi thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.');
+    }
   };
 
   if (loading) {
@@ -312,14 +371,48 @@ const ProductDetail = () => {
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Mô tả sản phẩm</h3>
                   <p className="text-gray-700 leading-relaxed">{product.description}</p>
                 </div>
+
+                {/* Chọn số lượng */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Số lượng
+                  </label>
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      value={quantity}
+                      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-20 text-center border border-gray-300 rounded-lg py-2 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    />
+                    <button
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Nút bấm */}
               <div className="flex flex-col sm:flex-row gap-4 mt-4">
-                <button className="flex-1 px-6 py-3 bg-amber-800 text-white font-semibold tracking-wide uppercase rounded-full hover:bg-amber-900 transition-all duration-300">
+                <button
+                  onClick={handleAddToCart}
+                  className="flex-1 px-6 py-3 bg-amber-800 text-white font-semibold tracking-wide uppercase rounded-full hover:bg-amber-900 transition-all duration-300"
+                >
                   Thêm vào giỏ
                 </button>
-                <button className="flex-1 px-6 py-3 bg-white text-amber-800 font-semibold tracking-wide uppercase rounded-full border-2 border-amber-800 hover:bg-amber-800 hover:text-white transition-all duration-300">
+                <button
+                  onClick={handleBuyNow}
+                  className="flex-1 px-6 py-3 bg-white text-amber-800 font-semibold tracking-wide uppercase rounded-full border-2 border-amber-800 hover:bg-amber-800 hover:text-white transition-all duration-300"
+                >
                   Mua ngay
                 </button>
               </div>

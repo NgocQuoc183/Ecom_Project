@@ -1,7 +1,7 @@
 import axios from 'axios';
 import jwt_decode from 'jwt-decode';
 
-const API_URL = 'http://localhost:5000/api/user';
+const API_URL = '/api/user';
 
 // Hàm helper để lấy token và kiểm tra
 const getAuthHeaders = () => {
@@ -66,6 +66,30 @@ export const changePassword = async (userId, passwordData) => {
     return response.data;
   } catch (error) {
     console.error('Error changing password:', error);
+    throw error;
+  }
+};
+
+// Upload avatar
+export const uploadAvatar = async (userId, file) => {
+  try {
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const token = localStorage.getItem('token');
+    const response = await axios.post(
+      `${API_URL}/avatar/${userId}`,
+      formData,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error uploading avatar:', error);
     throw error;
   }
 };

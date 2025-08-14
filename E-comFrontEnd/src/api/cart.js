@@ -1,7 +1,7 @@
 
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/cart'; // URL của API giỏ hàng
+const API_URL = '/api/cart'; // URL của API giỏ hàng
 
 // Hàm thêm sản phẩm vào giỏ hàng
 export const addToCart = async (userId, productId, quantity) => {

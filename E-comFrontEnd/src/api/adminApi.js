@@ -30,4 +30,12 @@ export const updateOrderStatus = (id, status) => api.put(`/orders/${id}`, { stat
 // Dashboard Stats
 export const getDashboardStats = () => api.get('/categories/dashboard/stats');
 
+// Users
+export const getAllUsers = () => api.get('/users');
+export const getUserById = (id) => api.get(`/users/${id}`);
+export const updateUser = (id, data) => api.put(`/users/${id}`, data);
+export const deleteUser = (id) => api.delete(`/users/${id}`);
+export const toggleUserStatus = (id, status) => api.patch(`/users/${id}/status`, { status });
+export const getUserStats = () => api.get('/users/stats');
+
 export default api;

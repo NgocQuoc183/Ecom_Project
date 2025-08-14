@@ -92,11 +92,21 @@ const NavbarAdmin = () => {
         <li>
           <NavLink
             to="/manageorders"
-            className={({ isActive }) => 
+            className={({ isActive }) =>
               `px-4 py-2 rounded-md transition duration-200 ${isActive ? 'bg-blue-600 font-bold' : 'hover:bg-blue-800'}`
             }
           >
             Quản lý Đơn hàng
+          </NavLink>
+        </li>
+        <li>
+          <NavLink
+            to="/manageusers"
+            className={({ isActive }) =>
+              `px-4 py-2 rounded-md transition duration-200 ${isActive ? 'bg-blue-600 font-bold' : 'hover:bg-blue-800'}`
+            }
+          >
+            Quản lý Người dùng
           </NavLink>
         </li>
       </ul>

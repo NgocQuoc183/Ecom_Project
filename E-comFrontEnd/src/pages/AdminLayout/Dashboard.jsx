@@ -240,6 +240,9 @@ const Dashboard = () => {
               <a href="/manageorders" className="block w-full bg-purple-500 text-white py-2 px-4 rounded-lg hover:bg-purple-600 transition duration-200 text-center">
                 Quản lý đơn hàng
               </a>
+              <a href="/manageusers" className="block w-full bg-indigo-500 text-white py-2 px-4 rounded-lg hover:bg-indigo-600 transition duration-200 text-center">
+                Quản lý người dùng
+              </a>
             </div>
           </div>
 

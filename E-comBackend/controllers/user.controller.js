@@ -95,10 +95,12 @@
 // controllers/user.controller.js
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
 
 // Lấy thông tin hồ sơ người dùng
 exports.getUserProfile = (req, res) => {
-  const userId = req.params.id;
+  const userId = parseInt(req.params.id);
   if (userId !== req.user.id) {
     return res.status(403).json({ message: 'Không có quyền truy cập hồ sơ này.' });
   }
@@ -117,7 +119,7 @@ exports.getUserProfile = (req, res) => {
 
 // Cập nhật thông tin hồ sơ người dùng
 exports.updateUserProfile = (req, res) => {
-  const userId = req.params.id;
+  const userId = parseInt(req.params.id);
   if (userId !== req.user.id) {
     return res.status(403).json({ message: 'Không có quyền cập nhật hồ sơ này.' });
   }
@@ -151,7 +153,7 @@ exports.updateUserProfile = (req, res) => {
 
 // Đổi mật khẩu người dùng
 exports.changePassword = (req, res) => {
-  const userId = req.params.id;
+  const userId = parseInt(req.params.id);
   if (userId !== req.user.id) {
     return res.status(403).json({ message: 'Không có quyền đổi mật khẩu.' });
   }
@@ -190,5 +192,56 @@ exports.changePassword = (req, res) => {
         res.status(200).json({ message: 'Đổi mật khẩu thành công.' });
       }
     );
+  });
+};
+
+// Upload avatar
+exports.uploadAvatar = (req, res) => {
+  const userId = req.user.id;
+
+  if (!req.file) {
+    return res.status(400).json({ message: 'Vui lòng chọn file ảnh.' });
+  }
+
+  // Tạo URL cho avatar
+  const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+  // Lấy avatar cũ để xóa
+  const getOldAvatarSql = 'SELECT avatar_url FROM users WHERE id = ?';
+
+  db.query(getOldAvatarSql, [userId], (err, results) => {
+    if (err) {
+      console.error('Error getting old avatar:', err);
+      // Không return lỗi, vẫn tiếp tục update avatar mới
+    }
+
+    const oldAvatarUrl = results && results[0] ? results[0].avatar_url : null;
+
+    // Cập nhật avatar mới trong database
+    const updateSql = 'UPDATE users SET avatar_url = ?, updated_at = NOW() WHERE id = ?';
+
+    db.query(updateSql, [avatarUrl, userId], (err, result) => {
+      if (err) {
+        console.error('Error updating avatar:', err);
+        // Xóa file vừa upload nếu update DB thất bại
+        fs.unlink(req.file.path, (unlinkErr) => {
+          if (unlinkErr) console.error('Error deleting uploaded file:', unlinkErr);
+        });
+        return res.status(500).json({ message: 'Lỗi cập nhật avatar.', error: err });
+      }
+
+      // Xóa avatar cũ nếu có
+      if (oldAvatarUrl && oldAvatarUrl !== avatarUrl) {
+        const oldFilePath = path.join(__dirname, '..', oldAvatarUrl);
+        fs.unlink(oldFilePath, (unlinkErr) => {
+          if (unlinkErr) console.error('Error deleting old avatar:', unlinkErr);
+        });
+      }
+
+      res.status(200).json({
+        message: 'Upload avatar thành công!',
+        avatarUrl: avatarUrl
+      });
+    });
   });
 };

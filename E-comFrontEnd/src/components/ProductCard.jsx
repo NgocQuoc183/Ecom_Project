@@ -30,6 +30,12 @@ const ProductCard = ({ product }) => {
   const handleAddToCart = async (e) => {
     e.stopPropagation();
 
+    if (!userId) {
+      alert('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
+      navigate('/login');
+      return;
+    }
+
     const quantity = 1;
 
     console.log("Dữ liệu gửi đi:", { user_id: userId, product_id: product.id, quantity });
