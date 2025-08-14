@@ -1,0 +1,15 @@
+{
+  "user_id": 13,
+  "items": [
+    {
+      "product_id": 5,
+      "quantity": 1,
+      "price": 299000
+    }
+  ],
+  "total_amount": 299000,
+  "shipping_address": "123 Test Street, Ho Chi Minh City",
+  "payment_method": "VNPay",
+  "recipient_name": "Test User VNPay",
+  "recipient_phone": "0123456789"
+}

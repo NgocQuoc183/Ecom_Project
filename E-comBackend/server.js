@@ -27,6 +27,8 @@ const adminCategoryRoutes = require('./routes/admin/category.admin.routes');
 const adminOrderRoutes = require('./routes/admin/order.admin.routes');
 const adminUserRoutes = require('./routes/admin/user.admin.routes');
 const reviewRoutes = require('./routes/review.routes');
+const addressRoutes = require('./routes/address.routes');
+const paymentRoutes = require('./routes/payment.routes');
 
 // Sử dụng routes
 app.use('/api/auth', authRoutes);
@@ -42,6 +44,8 @@ app.use('/api/admin/orders', adminOrderRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/categories', require('./routes/category.routes'));
+app.use('/api/address', addressRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Route kiểm tra server
 app.get('/', (req, res) => {

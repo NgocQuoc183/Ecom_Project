@@ -10,8 +10,10 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { createOrder } from '../api/order'; // Import API (bạn cần tạo file này nếu chưa)
+import { createOrderAndPayment } from '../api/paymentApi';
 import jwtDecode from 'jwt-decode'; // Để lấy userId
-import { FaCheckCircle } from 'react-icons/fa'; // Icon success
+import { FaCheckCircle, FaMapMarkerAlt, FaUser, FaPhone, FaCreditCard, FaMoneyBillWave } from 'react-icons/fa'; // Icon success
+import AddressSelector from '../components/AddressSelector';
 
 const Checkout = () => {
   const location = useLocation();
@@ -19,7 +21,12 @@ const Checkout = () => {
   const { cartItems = [], total = 0 } = location.state || {}; // Nhận từ Cart
 
   const [userId, setUserId] = useState(null);
-  const [shippingAddress, setShippingAddress] = useState('');
+  const [shippingInfo, setShippingInfo] = useState({
+    fullName: '',
+    phone: '',
+    detailAddress: '',
+    addressData: null
+  });
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -43,22 +50,86 @@ const Checkout = () => {
     }
   }, [navigate]);
 
+  // Xử lý thay đổi địa chỉ
+  const handleAddressChange = (addressData) => {
+    setShippingInfo(prev => ({
+      ...prev,
+      addressData
+    }));
+  };
+
+  // Xử lý thay đổi thông tin giao hàng
+  const handleShippingInfoChange = (field, value) => {
+    setShippingInfo(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   // Hàm submit order
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!shippingAddress.trim() || !paymentMethod) {
-      return setError('Vui lòng điền đầy đủ thông tin.');
+
+    // Validation
+    if (!shippingInfo.fullName.trim()) {
+      return setError('Vui lòng nhập họ tên người nhận.');
     }
+    if (!shippingInfo.phone.trim()) {
+      return setError('Vui lòng nhập số điện thoại.');
+    }
+    if (!shippingInfo.detailAddress.trim()) {
+      return setError('Vui lòng nhập địa chỉ chi tiết.');
+    }
+    if (!shippingInfo.addressData?.wardCode) {
+      return setError('Vui lòng chọn đầy đủ Tỉnh/Quận/Xã.');
+    }
+    if (!paymentMethod) {
+      return setError('Vui lòng chọn phương thức thanh toán.');
+    }
+
+    // Tạo địa chỉ giao hàng đầy đủ
+    const fullShippingAddress = [
+      shippingInfo.detailAddress,
+      shippingInfo.addressData.fullAddress
+    ].join(', ');
     setLoading(true);
     setError(null); // Reset error trước khi gọi API
     try {
-      const response = await createOrder({
+      console.log('=== CHECKOUT DEBUG ===');
+      console.log('cartItems:', cartItems);
+      console.log('userId:', userId);
+      console.log('total:', total);
+
+      const orderData = {
         user_id: userId,
-        shipping_address: shippingAddress,
-        payment_method: paymentMethod
-      });
+        shipping_address: fullShippingAddress,
+        payment_method: paymentMethod,
+        recipient_name: shippingInfo.fullName,
+        recipient_phone: shippingInfo.phone,
+        items: cartItems.map(item => {
+          console.log('Processing cart item:', item);
+          return {
+            product_id: item.product_id || item.id,
+            quantity: item.quantity,
+            price: item.price || item.unit_price
+          };
+        }),
+        total_amount: total
+      };
+
+      console.log('Order data to send:', orderData);
+
+      const response = await createOrderAndPayment(orderData);
+
+      // Nếu là VNPay, redirect đến trang thanh toán
+      if (response.paymentMethod === 'VNPay' && response.paymentUrl) {
+        window.location.href = response.paymentUrl;
+        return;
+      }
+
+      // COD hoặc thanh toán khác
       setSuccess(true);
-      setTimeout(() => navigate('/ordershistory', { state: { orderId: response.order_id } }), 2000); // Redirect sang trang orders
+      setTimeout(() => navigate('/ordershistory', { state: { orderId: response.orderId } }), 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'Lỗi khi đặt hàng. Vui lòng thử lại.');
     } finally {
@@ -95,38 +166,122 @@ const Checkout = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Phần form thông tin */}
             <div>
-              <h2 className="text-xl font-semibold mb-4">Thông tin giao hàng</h2>
-              <form onSubmit={handleSubmit}>
-                <div className="mb-4">
-                  <label className="block text-gray-700 mb-2">Địa chỉ giao hàng</label>
-                  <textarea
-                    value={shippingAddress}
-                    onChange={(e) => setShippingAddress(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    rows="4"
-                    placeholder="Nhập địa chỉ đầy đủ (số nhà, đường, quận/huyện, tỉnh/thành phố)"
+              <h2 className="text-xl font-semibold mb-6">Thông tin giao hàng</h2>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Thông tin người nhận */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <FaUser className="inline mr-2" />
+                      Họ tên người nhận <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={shippingInfo.fullName}
+                      onChange={(e) => handleShippingInfoChange('fullName', e.target.value)}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="Nhập họ tên người nhận"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <FaPhone className="inline mr-2" />
+                      Số điện thoại <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={shippingInfo.phone}
+                      onChange={(e) => handleShippingInfoChange('phone', e.target.value)}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="Nhập số điện thoại"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Địa chỉ chi tiết */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <FaMapMarkerAlt className="inline mr-2" />
+                    Địa chỉ chi tiết <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={shippingInfo.detailAddress}
+                    onChange={(e) => handleShippingInfoChange('detailAddress', e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="Số nhà, tên đường..."
                     required
                   />
                 </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 mb-2">Phương thức thanh toán</label>
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    required
-                  >
-                    <option value="COD">Thanh toán khi nhận hàng (COD)</option>
-                    <option value="bank">Chuyển khoản ngân hàng</option>
-                    {/* Thêm option khác nếu cần, ví dụ: VNPay */}
-                  </select>
+
+                {/* Address Selector */}
+                <div>
+                  <AddressSelector
+                    onAddressChange={handleAddressChange}
+                    required={true}
+                  />
                 </div>
+                {/* Phương thức thanh toán */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phương thức thanh toán <span className="text-red-500">*</span>
+                  </label>
+                  <div className="space-y-3">
+                    <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="COD"
+                        checked={paymentMethod === 'COD'}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="mr-3"
+                      />
+                      <div className="flex items-center gap-3">
+                        <FaMoneyBillWave className="text-green-500" />
+                        <div>
+                          <div className="font-medium">Thanh toán khi nhận hàng (COD)</div>
+                          <div className="text-sm text-gray-500">Thanh toán bằng tiền mặt khi nhận hàng</div>
+                        </div>
+                      </div>
+                    </label>
+                    <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="VNPay"
+                        checked={paymentMethod === 'VNPay'}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="mr-3"
+                      />
+                      <div className="flex items-center gap-3">
+                        <FaCreditCard className="text-blue-500" />
+                        <div>
+                          <div className="font-medium">Thanh toán VNPay</div>
+                          <div className="text-sm text-gray-500">Thanh toán qua ví điện tử VNPay</div>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full px-6 py-3 bg-amber-800 text-white font-semibold rounded-full hover:bg-amber-900 transition-all duration-300 disabled:opacity-50"
+                  className="w-full px-6 py-4 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {loading ? 'Đang xử lý...' : 'Đặt hàng'}
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>
+                      <FaCheckCircle />
+                      Đặt hàng ngay
+                    </>
+                  )}
                 </button>
               </form>
             </div>

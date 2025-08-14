@@ -14,6 +14,9 @@ import ManageProducts from "../pages/AdminLayout/ManageProducts";
 import ManageOrders from "../pages/AdminLayout/ManageOrders";
 import ManageUsers from "../pages/AdminLayout/ManageUsers";
 import TestCart from "../pages/TestCart";
+import TestAddress from "../pages/TestAddress";
+import PaymentSuccess from "../pages/PaymentSuccess";
+import PaymentFailed from "../pages/PaymentFailed";
 
 const AppRoutes = () => {
   return (
@@ -33,6 +36,9 @@ const AppRoutes = () => {
        <Route path="/manageusers" element={<ManageUsers/>} />
       <Route path="/ordershistory" element={<OrdersHistory />} />
       <Route path="/test-cart" element={<TestCart />} />
+      <Route path="/test-address" element={<TestAddress />} />
+      <Route path="/payment-success" element={<PaymentSuccess />} />
+      <Route path="/payment-failed" element={<PaymentFailed />} />
 
     </Routes>
 
