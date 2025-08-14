@@ -65,3 +65,62 @@ exports.deleteCategory = (req, res) => {
     res.status(200).json({ message: 'Xoá danh mục thành công.' });
   });
 };
+
+// Lấy thống kê dashboard
+exports.getDashboardStats = (req, res) => {
+  const queries = [
+    'SELECT COUNT(*) as total_categories FROM categories',
+    'SELECT COUNT(*) as total_products FROM products',
+    'SELECT COUNT(*) as total_orders FROM orders',
+    'SELECT COUNT(*) as total_users FROM users',
+    'SELECT SUM(total_amount) as total_revenue FROM orders WHERE status = "completed"',
+    // Thống kê đơn hàng theo tháng (6 tháng gần nhất)
+    `SELECT
+      DATE_FORMAT(created_at, '%Y-%m') as month,
+      COUNT(*) as orders,
+      SUM(total_amount) as revenue
+     FROM orders
+     WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+     GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+     ORDER BY month`,
+    // Thống kê trạng thái đơn hàng
+    `SELECT
+      status,
+      COUNT(*) as count
+     FROM orders
+     GROUP BY status`,
+    // Thống kê sản phẩm theo danh mục
+    `SELECT
+      c.name as category,
+      COUNT(p.id) as products
+     FROM categories c
+     LEFT JOIN products p ON c.id = p.category_id
+     GROUP BY c.id, c.name`
+  ];
+
+  Promise.all(queries.map(query => {
+    return new Promise((resolve, reject) => {
+      db.query(query, (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+  }))
+  .then(results => {
+    const stats = {
+      totalCategories: results[0][0].total_categories || 0,
+      totalProducts: results[1][0].total_products || 0,
+      totalOrders: results[2][0].total_orders || 0,
+      totalUsers: results[3][0].total_users || 0,
+      totalRevenue: results[4][0].total_revenue || 0,
+      monthlyOrders: results[5] || [],
+      orderStatus: results[6] || [],
+      productsByCategory: results[7] || []
+    };
+    res.status(200).json(stats);
+  })
+  .catch(err => {
+    console.error('Error fetching dashboard stats:', err);
+    res.status(500).json({ message: 'Lỗi lấy thống kê dashboard.', error: err });
+  });
+};

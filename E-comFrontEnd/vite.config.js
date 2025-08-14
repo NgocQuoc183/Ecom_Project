@@ -11,7 +11,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {  // Proxy tất cả request bắt đầu bằng /api
-        target: 'http://localhost:5000',  // Địa chỉ backend
+        target: 'http://localhost:3001',  // Địa chỉ backend
         changeOrigin: true,  // Thay đổi origin để tránh CORS
         secure: false,  // Không yêu cầu HTTPS (dùng cho localhost)
       },

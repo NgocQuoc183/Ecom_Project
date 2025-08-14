@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api/admin', // Adjust if your backend is on a different port, e.g., 'http://localhost:5000/api'
+  baseURL: '/api/admin', // Sử dụng URL tương đối để proxy hoạt động
   headers: {
     'Content-Type': 'application/json',
   },
@@ -26,5 +26,8 @@ export const getAllOrders = () => api.get('/orders');
 export const getOrderDetails = (id) => api.get(`/orders/${id}`);
 // export const updateOrderStatus = (id, status) => api.put(`/orders/${id}/status`, { status });
 export const updateOrderStatus = (id, status) => api.put(`/orders/${id}`, { status });
+
+// Dashboard Stats
+export const getDashboardStats = () => api.get('/categories/dashboard/stats');
 
 export default api;
