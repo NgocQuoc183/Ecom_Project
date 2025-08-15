@@ -109,6 +109,16 @@ const NavbarAdmin = () => {
             Quản lý Người dùng
           </NavLink>
         </li>
+        <li>
+          <NavLink
+            to="/managereviews"
+            className={({ isActive }) =>
+              `px-4 py-2 rounded-md transition duration-200 ${isActive ? 'bg-blue-600 font-bold' : 'hover:bg-blue-800'}`
+            }
+          >
+            Quản lý Đánh giá
+          </NavLink>
+        </li>
       </ul>
     </nav>
   );

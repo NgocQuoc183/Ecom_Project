@@ -25,7 +25,7 @@ import NavbarAdmin from "./components/admin/NavbarAdmin"; // Import navbar admin
 
 const App = () => {
   const location = useLocation();
-  const adminPaths = ["/dashboard", "/managecategories", "/manageproducts", "/manageorders", "/manageusers"];
+  const adminPaths = ["/dashboard", "/managecategories", "/manageproducts", "/manageorders", "/manageusers", "/managereviews"];
   const isAdmin = adminPaths.includes(location.pathname);
 
   return (

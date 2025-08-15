@@ -13,6 +13,7 @@ import ManageCategories from "../pages/AdminLayout/ManageCategories";
 import ManageProducts from "../pages/AdminLayout/ManageProducts";
 import ManageOrders from "../pages/AdminLayout/ManageOrders";
 import ManageUsers from "../pages/AdminLayout/ManageUsers";
+import ManageReviews from "../pages/AdminLayout/ManageReviews";
 import TestCart from "../pages/TestCart";
 import TestAddress from "../pages/TestAddress";
 import PaymentSuccess from "../pages/PaymentSuccess";
@@ -34,6 +35,7 @@ const AppRoutes = () => {
       <Route path="/manageproducts" element={<ManageProducts />} />
        <Route path="/manageorders" element={<ManageOrders/>} />
        <Route path="/manageusers" element={<ManageUsers/>} />
+       <Route path="/managereviews" element={<ManageReviews/>} />
       <Route path="/ordershistory" element={<OrdersHistory />} />
       <Route path="/test-cart" element={<TestCart />} />
       <Route path="/test-address" element={<TestAddress />} />

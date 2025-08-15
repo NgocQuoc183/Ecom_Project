@@ -75,7 +75,13 @@ const Cart = () => {
   };
 
   // Tính tổng giá trị giỏ hàng
-  const totalCartPrice = cartItems.reduce((total, item) => total + item.total_price, 0);
+  const totalCartPrice = cartItems.reduce((total, item) => {
+    const itemTotal = parseFloat(item.total_price) || 0;
+    console.log('Cart item:', item.product_name, 'Total price:', item.total_price, 'Parsed:', itemTotal);
+    return total + itemTotal;
+  }, 0);
+
+  console.log('Final total cart price:', totalCartPrice);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -120,8 +126,8 @@ const Cart = () => {
                       />
                       <div className="flex-1">
                         <h2 className="text-lg font-semibold text-gray-800 mb-2">{item.product_name}</h2>
-                        <p className="text-gray-600">Đơn giá: {item.price.toLocaleString()} <sup className="text-sm">VNĐ</sup></p>
-                        <p className="text-gray-800 font-medium">Tổng: {item.total_price.toLocaleString()} <sup className="text-sm">VNĐ</sup></p>
+                        <p className="text-gray-600">Đơn giá: {parseFloat(item.price).toLocaleString()} <sup className="text-sm">VNĐ</sup></p>
+                        <p className="text-gray-800 font-medium">Tổng: {parseFloat(item.total_price).toLocaleString()} <sup className="text-sm">VNĐ</sup></p>
                         <div className="flex items-center mt-3 gap-2">
                           <label className="text-gray-600 text-sm">Số lượng:</label>
                           <input

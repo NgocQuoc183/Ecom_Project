@@ -293,12 +293,12 @@ const Checkout = () => {
                 {cartItems.map((item) => (
                   <div key={item.cart_id} className="flex justify-between text-gray-800">
                     <span>{item.product_name} (x{item.quantity})</span>
-                    <span>{item.total_price.toLocaleString()} VNĐ</span>
+                    <span>{parseFloat(item.total_price).toLocaleString()} VNĐ</span>
                   </div>
                 ))}
                 <div className="border-t pt-4 flex justify-between font-bold text-lg">
                   <span>Tổng cộng</span>
-                  <span>{total.toLocaleString()} VNĐ</span>
+                  <span>{parseFloat(total).toLocaleString()} VNĐ</span>
                 </div>
               </div>
             </div>

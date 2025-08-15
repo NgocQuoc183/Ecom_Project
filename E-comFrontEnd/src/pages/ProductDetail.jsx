@@ -171,6 +171,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { addToCart } from '../api/cart';
 import jwt_decode from 'jwt-decode';
+import ReviewSection from '../components/ReviewSection';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -418,6 +419,11 @@ const ProductDetail = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Phần đánh giá sản phẩm */}
+        <div className="mt-12">
+          <ReviewSection productId={product.id} />
         </div>
       </div>
     </div>
