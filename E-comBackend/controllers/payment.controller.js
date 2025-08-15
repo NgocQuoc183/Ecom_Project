@@ -1,5 +1,6 @@
 const VnPayService = require('../services/vnpayService');
 const db = require('../config/db');
+const { sendPaymentSuccessEmail } = require('../services/emailService');
 
 /**
  * Payment Controller - Xử lý thanh toán theo chuẩn Node.js
@@ -78,6 +79,9 @@ exports.vnpayCallback = async (req, res) => {
   try {
     const vnpParams = req.query;
 
+    console.log('=== VNPAY CALLBACK DEBUG ===');
+    console.log('Full URL:', req.url);
+    console.log('Query params:', JSON.stringify(vnpParams, null, 2));
     console.log('VNPay callback received:', vnpParams);
 
     // Validate callback parameters
@@ -107,11 +111,19 @@ exports.vnpayCallback = async (req, res) => {
         result.data.transactionNo,
         vnpParams.vnp_ResponseCode,
         orderId
-      ], (err) => {
+      ], async (err) => {
         if (err) {
           console.error('Error updating order status:', err);
         } else {
           console.log('Order status updated successfully:', orderId);
+
+          // Gửi email thông báo thanh toán thành công
+          try {
+            await sendPaymentSuccessEmailForOrder(orderId);
+          } catch (emailError) {
+            console.error('Error sending payment success email:', emailError);
+            // Không làm gián đoạn flow chính nếu gửi email lỗi
+          }
         }
       });
 
@@ -267,7 +279,7 @@ exports.createOrderAndPayment = async (req, res) => {
 
       console.log('Order items data:', orderItemsData);
 
-      db.query(orderItemsSql, [orderItemsData], (err) => {
+      db.query(orderItemsSql, [orderItemsData], async (err) => {
         if (err) {
           console.error('Error creating order items:', err);
           return res.status(500).json({
@@ -296,7 +308,14 @@ exports.createOrderAndPayment = async (req, res) => {
             paymentMethod: 'VNPay'
           });
         } else {
-          // COD hoặc phương thức khác
+          // COD hoặc phương thức khác - gửi email xác nhận đơn hàng
+          try {
+            await sendPaymentSuccessEmailForOrder(orderId);
+          } catch (emailError) {
+            console.error('Error sending order confirmation email:', emailError);
+            // Không làm gián đoạn flow chính nếu gửi email lỗi
+          }
+
           res.json({
             success: true,
             message: 'Tạo đơn hàng thành công',
@@ -315,4 +334,80 @@ exports.createOrderAndPayment = async (req, res) => {
       error: error.message
     });
   }
+};
+
+/**
+ * Helper function: Gửi email thông báo thanh toán thành công
+ * @param {number} orderId - ID của đơn hàng
+ */
+const sendPaymentSuccessEmailForOrder = async (orderId) => {
+  return new Promise((resolve, reject) => {
+    // Lấy thông tin đơn hàng, user và order items
+    const orderDetailsSql = `
+      SELECT
+        o.*,
+        u.name as user_name,
+        u.email as user_email
+      FROM orders o
+      JOIN users u ON o.user_id = u.id
+      WHERE o.id = ?
+    `;
+
+    db.query(orderDetailsSql, [orderId], (err, orderResults) => {
+      if (err) {
+        console.error('Error fetching order details:', err);
+        return reject(err);
+      }
+
+      if (orderResults.length === 0) {
+        return reject(new Error('Order not found'));
+      }
+
+      const order = orderResults[0];
+      const user = {
+        name: order.user_name,
+        email: order.user_email
+      };
+
+      // Lấy danh sách sản phẩm trong đơn hàng
+      const orderItemsSql = `
+        SELECT
+          oi.*,
+          p.name,
+          p.image
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = ?
+      `;
+
+      db.query(orderItemsSql, [orderId], async (itemsErr, itemsResults) => {
+        if (itemsErr) {
+          console.error('Error fetching order items:', itemsErr);
+          return reject(itemsErr);
+        }
+
+        const orderItems = itemsResults;
+
+        // Gửi email
+        try {
+          const emailResult = await sendPaymentSuccessEmail({
+            order,
+            user,
+            orderItems
+          });
+
+          if (emailResult.success) {
+            console.log(`✅ Payment success email sent to ${user.email} for order #${orderId}`);
+            resolve(emailResult);
+          } else {
+            console.error(`❌ Failed to send email to ${user.email}:`, emailResult.error);
+            reject(new Error(emailResult.error));
+          }
+        } catch (emailError) {
+          console.error('Error in sendPaymentSuccessEmail:', emailError);
+          reject(emailError);
+        }
+      });
+    });
+  });
 };

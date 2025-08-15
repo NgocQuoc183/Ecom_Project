@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Xác nhận thanh toán VNPay</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #8B4513;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin-bottom: 10px;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #8B4513;
+        }
+        
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .controls {
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .btn {
+            background: #8B4513;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        .btn:hover {
+            background: #6d3410;
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .table-container {
+            padding: 20px;
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-pending {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        
+        .status-paid {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .amount {
+            font-weight: bold;
+            color: #8B4513;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏪 Admin - Xác nhận thanh toán VNPay</h1>
+            <p>Quản lý các đơn hàng VNPay chưa được xác nhận thanh toán</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number" id="totalOrders">-</div>
+                <div class="stat-label">Đơn hàng chờ xác nhận</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="totalAmount">-</div>
+                <div class="stat-label">Tổng giá trị</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="todayOrders">-</div>
+                <div class="stat-label">Đơn hôm nay</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn" onclick="loadPendingPayments()">🔄 Làm mới</button>
+            <button class="btn btn-success" onclick="confirmAllPayments()">✅ Xác nhận tất cả</button>
+        </div>
+        
+        <div class="success-message" id="successMessage"></div>
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="table-container">
+            <div class="loading" id="loading">Đang tải dữ liệu...</div>
+            <table id="ordersTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Khách hàng</th>
+                        <th>Email</th>
+                        <th>Tổng tiền</th>
+                        <th>Địa chỉ</th>
+                        <th>Ngày tạo</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let pendingOrders = [];
+
+        // Load danh sách đơn hàng chưa thanh toán
+        async function loadPendingPayments() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('ordersTable').style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/test/pending-payments');
+                const result = await response.json();
+                
+                if (result.success) {
+                    pendingOrders = result.data;
+                    displayOrders(pendingOrders);
+                    updateStats(pendingOrders);
+                } else {
+                    showError('Lỗi tải dữ liệu: ' + result.message);
+                }
+            } catch (error) {
+                showError('Lỗi kết nối: ' + error.message);
+            }
+            
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // Hiển thị danh sách đơn hàng
+        function displayOrders(orders) {
+            const tbody = document.getElementById('ordersBody');
+            tbody.innerHTML = '';
+            
+            orders.forEach(order => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>#${order.id}</td>
+                    <td>${order.recipient_name}</td>
+                    <td>${order.user_email}</td>
+                    <td class="amount">${formatCurrency(order.total_amount)}</td>
+                    <td>${order.shipping_address}</td>
+                    <td>${formatDate(order.created_at)}</td>
+                    <td><span class="status-pending">Chờ xác nhận</span></td>
+                    <td>
+                        <button class="btn btn-success" onclick="confirmPayment(${order.id})">
+                            ✅ Xác nhận
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('ordersTable').style.display = 'table';
+        }
+
+        // Cập nhật thống kê
+        function updateStats(orders) {
+            const totalOrders = orders.length;
+            const totalAmount = orders.reduce((sum, order) => sum + parseFloat(order.total_amount), 0);
+            const today = new Date().toDateString();
+            const todayOrders = orders.filter(order => 
+                new Date(order.created_at).toDateString() === today
+            ).length;
+            
+            document.getElementById('totalOrders').textContent = totalOrders;
+            document.getElementById('totalAmount').textContent = formatCurrency(totalAmount);
+            document.getElementById('todayOrders').textContent = todayOrders;
+        }
+
+        // Xác nhận thanh toán cho một đơn hàng
+        async function confirmPayment(orderId) {
+            if (!confirm(`Xác nhận thanh toán cho đơn hàng #${orderId}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/test/confirm-payment/${orderId}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess(`Đã xác nhận thanh toán cho đơn hàng #${orderId} và gửi email thành công!`);
+                    loadPendingPayments(); // Reload danh sách
+                } else {
+                    showError('Lỗi xác nhận thanh toán: ' + result.message);
+                }
+            } catch (error) {
+                showError('Lỗi kết nối: ' + error.message);
+            }
+        }
+
+        // Xác nhận tất cả đơn hàng
+        async function confirmAllPayments() {
+            if (pendingOrders.length === 0) {
+                showError('Không có đơn hàng nào để xác nhận');
+                return;
+            }
+            
+            if (!confirm(`Xác nhận thanh toán cho tất cả ${pendingOrders.length} đơn hàng?`)) {
+                return;
+            }
+            
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (const order of pendingOrders) {
+                try {
+                    const response = await fetch(`/api/test/confirm-payment/${order.id}`, {
+                        method: 'POST'
+                    });
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } catch (error) {
+                    errorCount++;
+                }
+            }
+            
+            showSuccess(`Đã xác nhận ${successCount} đơn hàng thành công! ${errorCount > 0 ? `(${errorCount} lỗi)` : ''}`);
+            loadPendingPayments(); // Reload danh sách
+        }
+
+        // Utility functions
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN', {
+                style: 'currency',
+                currency: 'VND'
+            }).format(amount);
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleString('vi-VN');
+        }
+
+        function showSuccess(message) {
+            const element = document.getElementById('successMessage');
+            element.textContent = message;
+            element.style.display = 'block';
+            setTimeout(() => element.style.display = 'none', 5000);
+        }
+
+        function showError(message) {
+            const element = document.getElementById('errorMessage');
+            element.textContent = message;
+            element.style.display = 'block';
+            setTimeout(() => element.style.display = 'none', 5000);
+        }
+
+        // Load dữ liệu khi trang được tải
+        window.onload = function() {
+            loadPendingPayments();
+        };
+    </script>
+</body>
+</html>

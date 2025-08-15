@@ -86,26 +86,17 @@ class VnPayService {
    * @returns {string} URL thanh toán hoàn chỉnh
    */
   buildPaymentUrl(params) {
-    // Tạo chữ ký
+    // Tạo chữ ký với params chưa có signature
     const signature = this.createSignature(params);
 
     // Thêm signature vào params
     const finalParams = { ...params, vnp_SecureHash: signature };
 
-    // Tạo query string với double encoding
-    let queryString = '';
-    const sortedKeys = Object.keys(finalParams).sort();
-
-    for (let i = 0; i < sortedKeys.length; i++) {
-      const key = sortedKeys[i];
-      const value = finalParams[key];
-
-      if (i === 0) {
-        queryString = key + '=' + encodeURIComponent(value);
-      } else {
-        queryString += '&' + key + '=' + encodeURIComponent(value);
-      }
-    }
+    // Tạo query string - không double encode vì sortParams đã encode rồi
+    const sortedParams = this.sortParams(finalParams);
+    const queryString = Object.keys(sortedParams)
+      .map(key => `${key}=${sortedParams[key]}`)
+      .join('&');
 
     const fullUrl = `${this.config.url}?${queryString}`;
     console.log('Final VNPay URL:', fullUrl);
@@ -204,23 +195,18 @@ class VnPayService {
     // Sắp xếp và encode params theo VNPay spec
     const sortedParams = this.sortParams(params);
 
-    // Tạo sign data string
-    let signData = '';
-    const keys = Object.keys(sortedParams);
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      if (i === 0) {
-        signData = key + '=' + sortedParams[key];
-      } else {
-        signData += '&' + key + '=' + sortedParams[key];
-      }
+    // Tạo sign data string theo format: key1=value1&key2=value2
+    const signDataParts = [];
+    for (const key of Object.keys(sortedParams)) {
+      signDataParts.push(`${key}=${sortedParams[key]}`);
     }
+    const signData = signDataParts.join('&');
 
     console.log('VNPay Sign Data:', signData);
 
-    // Tạo HMAC SHA512 với Buffer
+    // Tạo HMAC SHA512 - VNPay yêu cầu hash secret là string, không phải Buffer
     const hmac = crypto.createHmac('sha512', this.config.hashSecret);
-    const signature = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
+    const signature = hmac.update(signData, 'utf8').digest('hex');
 
     console.log('VNPay Signature:', signature);
 
@@ -234,40 +220,42 @@ class VnPayService {
    */
   sortParams(params) {
     const sorted = {};
-    const encodedKeys = [];
 
-    // Encode tất cả keys
-    for (let key in params) {
-      if (params.hasOwnProperty(key)) {
-        encodedKeys.push(encodeURIComponent(key));
+    // Lấy tất cả keys và sort theo alphabet
+    const keys = Object.keys(params).sort();
+
+    // Tạo sorted object với values đã encode đúng spec VNPay
+    for (const key of keys) {
+      if (params[key] !== null && params[key] !== undefined && params[key] !== '') {
+        // VNPay yêu cầu encode UTF-8 và replace space thành +
+        sorted[key] = encodeURIComponent(params[key])
+          .replace(/%20/g, '+')
+          .replace(/%21/g, '!')
+          .replace(/%27/g, "'")
+          .replace(/%28/g, '(')
+          .replace(/%29/g, ')')
+          .replace(/%2A/g, '*');
       }
-    }
-
-    // Sort keys
-    encodedKeys.sort();
-
-    // Tạo sorted object với encoded values
-    for (let i = 0; i < encodedKeys.length; i++) {
-      const originalKey = decodeURIComponent(encodedKeys[i]);
-      const encodedValue = encodeURIComponent(params[originalKey]).replace(/%20/g, '+');
-      sorted[originalKey] = encodedValue;
     }
 
     return sorted;
   }
 
   /**
-   * Format date theo định dạng VNPay (YYYYMMDDHHmmss)
+   * Format date theo định dạng VNPay (YYYYMMDDHHmmss) - GMT+7
    * @param {Date} date - Ngày cần format
    * @returns {string} Chuỗi ngày đã format
    */
   formatDate(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
+    // VNPay yêu cầu timezone GMT+7 (Vietnam)
+    const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000));
+
+    const year = vietnamTime.getUTCFullYear();
+    const month = String(vietnamTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(vietnamTime.getUTCDate()).padStart(2, '0');
+    const hours = String(vietnamTime.getUTCHours()).padStart(2, '0');
+    const minutes = String(vietnamTime.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(vietnamTime.getUTCSeconds()).padStart(2, '0');
 
     return `${year}${month}${day}${hours}${minutes}${seconds}`;
   }

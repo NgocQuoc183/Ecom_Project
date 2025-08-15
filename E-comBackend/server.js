@@ -11,6 +11,7 @@ dotenv.config();
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static('public')); // Serve static files
 
 // Serve static files (avatars)
 app.use('/uploads', express.static('uploads'));
@@ -30,6 +31,7 @@ const adminReviewRoutes = require('./routes/admin/review.admin.routes');
 const reviewRoutes = require('./routes/review.routes');
 const addressRoutes = require('./routes/address.routes');
 const paymentRoutes = require('./routes/payment.routes');
+const testRoutes = require('./routes/test.routes');
 
 // Sử dụng routes
 app.use('/api/auth', authRoutes);
@@ -48,6 +50,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/categories', require('./routes/category.routes'));
 app.use('/api/address', addressRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/test', testRoutes);
 
 // Route kiểm tra server
 app.get('/', (req, res) => {
