@@ -124,23 +124,20 @@ exports.updateUserProfile = (req, res) => {
     return res.status(403).json({ message: 'Không có quyền cập nhật hồ sơ này.' });
   }
 
-  const { name, email, role, avatar_url, phone } = req.body;
+  const { name, email, phone } = req.body;
   if (!name || name.trim() === '') {
     return res.status(400).json({ message: 'Tên không được để trống.' });
   }
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ message: 'Email không hợp lệ.' });
   }
-  if (!['user', 'admin'].includes(role)) {
-    return res.status(400).json({ message: 'Vai trò không hợp lệ.' });
-  }
 
   const sql = `
     UPDATE users
-    SET name = ?, email = ?, role = ?, avatar_url = ?, phone = ?, updated_at = CURRENT_TIMESTAMP
+    SET name = ?, email = ?, phone = ?
     WHERE id = ?
   `;
-  db.query(sql, [name, email, role, avatar_url || null, phone || null, userId], (err, result) => {
+  db.query(sql, [name, email, phone || null, userId], (err, result) => {
     if (err) {
       return res.status(500).json({ message: 'Lỗi server khi cập nhật thông tin.', error: err.message });
     }
